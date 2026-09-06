@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Axe Throw — Cast Pipeline Test</title>
+
+    <!--
+      ============================================================
+      THROWAWAY PIPELINE-TEST RECEIVER  —  NOT the real receiver.
+      ============================================================
+      Purpose: prove that a Chromecast can launch our custom Cast
+      receiver at all. It renders NO games. It exists only to answer:
+        "When the client casts to a projector, does our receiver
+         show up and stay up?"
+
+      When you build the real zero-drift receiver (bundling the
+      actual src/ui/*-board.js renderers + main.css), DELETE this
+      whole receiver-spike/ folder. Nothing here is meant to survive.
+      ============================================================
+    -->
+
+    <!-- Google Cast Application Framework (CAF) receiver SDK. This is the
+         official hosted library; it only works in the Chromecast's own
+         environment, which is exactly where this page runs. -->
+    <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --fg: #f4f6fb;
+        --dim: #7f8ea3;
+        --ok: #35d07f;
+        --accent: #ff4b4b;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      #app {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 4vmin;
+        gap: 2.5vmin;
+      }
+      .badge {
+        font-size: 9vmin;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        color: var(--ok);
+        text-shadow: 0 0 4vmin rgba(53, 208, 127, 0.35);
+      }
+      .sub {
+        font-size: 3.2vmin;
+        color: var(--dim);
+        max-width: 80vw;
+      }
+      .ns {
+        font-size: 2.6vmin;
+        color: var(--fg);
+        opacity: 0.85;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 1.2vmin 2.4vmin;
+        border-radius: 1.2vmin;
+      }
+      .throwaway {
+        position: fixed;
+        top: 2.5vmin;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 2.2vmin;
+        letter-spacing: 0.25em;
+        color: var(--accent);
+        opacity: 0.8;
+      }
+      #log {
+        margin-top: 2vmin;
+        width: min(90vw, 1200px);
+        max-height: 34vh;
+        overflow: hidden;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 2.4vmin;
+        text-align: left;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        padding-top: 1.6vmin;
+      }
+      #log .line {
+        white-space: pre-wrap;
+        word-break: break-word;
+        padding: 0.4vmin 0;
+        color: var(--dim);
+      }
+      #log .line.rx { color: var(--fg); }
+      #log .line .t { color: #5aa9ff; }
+    </style>
+  </head>
+
+  <body>
+    <div class="throwaway">PIPELINE TEST — THROWAWAY RECEIVER</div>
+
+    <div id="app">
+      <div class="badge">✅ RECEIVER LIVE</div>
+      <div class="sub">
+        If you can read this on the projector, the Chromecast launched our
+        custom receiver. The App ID resolved and the receiver is running.
+      </div>
+      <div class="ns" id="ns">urn:x-cast:com.hitz.axethrow</div>
+      <div class="sub">
+        Any message sent from the tablet on this channel will appear below.
+      </div>
+      <div id="log" aria-live="polite"></div>
+    </div>
+
+    <script>
+      // ---- Config -------------------------------------------------------
+      // Custom message channel. The SENDER (tablet) must use this EXACT same
+      // string when it sends messages, or nothing will arrive here.
+      const NAMESPACE = 'urn:x-cast:com.hitz.axethrow';
+
+      // ---- Tiny on-screen logger ---------------------------------------
+      // So you can see activity on the projector itself without a laptop
+      // attached — useful when the client is doing the cast setup in the venue.
+      const logEl = document.getElementById('log');
+      function log(msg, isRx) {
+        const line = document.createElement('div');
+        line.className = 'line' + (isRx ? ' rx' : '');
+        const time = new Date().toLocaleTimeString();
+        line.innerHTML =
+          '<span class="t">[' + time + ']</span> ' +
+          String(msg).replace(/[<>&]/g, (c) =>
+            ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])
+          );
+        logEl.prepend(line);
+        // Keep the log short so it never grows off-screen on the projector.
+        while (logEl.children.length > 12) logEl.lastChild.remove();
+      }
+
+      // ---- CAF receiver bootstrap --------------------------------------
+      const context = cast.framework.CastReceiverContext.getInstance();
+
+      // IMPORTANT #1: the custom namespace must be declared BEFORE start().
+      // Registering a listener on it here also implicitly declares it.
+      context.addCustomMessageListener(NAMESPACE, (event) => {
+        // event.data is whatever the sender passed to sendMessage(...).
+        let payload;
+        try {
+          payload =
+            typeof event.data === 'string'
+              ? event.data
+              : JSON.stringify(event.data);
+        } catch {
+          payload = '[unserializable payload]';
+        }
+        log('◀ received: ' + payload, true);
+      });
+
+      const options = new cast.framework.CastReceiverOptions();
+      // IMPORTANT #2: without this, CAF assumes we're a media app and tears
+      // the receiver down for "inactivity" between messages — which for a
+      // scoreboard (long gaps between throws) would kill the projection.
+      options.disableIdleTimeout = true;
+
+      // Log the lifecycle so the projector itself shows what's happening
+      // during the client's cast setup.
+      context.addEventListener(
+        cast.framework.system.EventType.READY,
+        () => log('receiver READY — listening on ' + NAMESPACE)
+      );
+      context.addEventListener(
+        cast.framework.system.EventType.SENDER_CONNECTED,
+        (e) => log('sender connected: ' + (e.senderId || '(unknown)'))
+      );
+      context.addEventListener(
+        cast.framework.system.EventType.SENDER_DISCONNECTED,
+        (e) => log('sender disconnected: ' + (e.senderId || '(unknown)'))
+      );
+
+      // IMPORTANT #3: start() comes LAST, after the namespace listener and
+      // options are set up.
+      context.start(options);
+    </script>
+  </body>
+</html>
