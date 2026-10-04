@@ -3,26 +3,21 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Axe Throw — Cast Pipeline Test</title>
+    <title>Axe Throw — Scoreboard Receiver</title>
 
     <!--
-      ============================================================
-      THROWAWAY PIPELINE-TEST RECEIVER  —  NOT the real receiver.
-      ============================================================
-      Purpose: prove that a Chromecast can launch our custom Cast
-      receiver at all. It renders NO games. It exists only to answer:
-        "When the client casts to a projector, does our receiver
-         show up and stay up?"
+      Google Cast receiver for the HitzAxeThrow scoreboard.
 
-      When you build the real zero-drift receiver (bundling the
-      actual src/ui/*-board.js renderers + main.css), DELETE this
-      whole receiver-spike/ folder. Nothing here is meant to survive.
-      ============================================================
+      Listens on the custom namespace for {game, state} messages pushed by the
+      tablet (CastPlugin.java -> src/lib/cast.js) and renders the matching board
+      via renderers/index.js. Display-only: the projector never captures input.
+
+      NAMESPACE must be the NO-SUFFIX form and match CastPlugin.java exactly.
+      (The old receiver-spike/ in the tablet repo can now be deleted.)
     -->
 
-    <!-- Google Cast Application Framework (CAF) receiver SDK. This is the
-         official hosted library; it only works in the Chromecast's own
-         environment, which is exactly where this page runs. -->
+    <!-- Google Cast Application Framework (CAF) receiver SDK — hosted; only runs
+         inside the Chromecast's own environment, which is where this page lives. -->
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 
     <style>
@@ -30,8 +25,10 @@
         --bg: #0b0f14;
         --fg: #f4f6fb;
         --dim: #7f8ea3;
-        --ok: #35d07f;
         --accent: #ff4b4b;
+        --leader: #ffd166;
+        --active: rgba(90, 169, 255, 0.18);
+        --line: rgba(255, 255, 255, 0.14);
       }
       * { box-sizing: border-box; }
       html, body {
@@ -41,152 +38,111 @@
         color: var(--fg);
         font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       }
-      #app {
+      #board-root {
         min-height: 100%;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        text-align: center;
         padding: 4vmin;
-        gap: 2.5vmin;
       }
-      .badge {
-        font-size: 9vmin;
-        font-weight: 800;
-        letter-spacing: 0.02em;
-        color: var(--ok);
-        text-shadow: 0 0 4vmin rgba(53, 208, 127, 0.35);
-      }
-      .sub {
-        font-size: 3.2vmin;
-        color: var(--dim);
-        max-width: 80vw;
-      }
-      .ns {
-        font-size: 2.6vmin;
-        color: var(--fg);
-        opacity: 0.85;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: rgba(255, 255, 255, 0.06);
-        padding: 1.2vmin 2.4vmin;
-        border-radius: 1.2vmin;
-      }
-      .throwaway {
-        position: fixed;
-        top: 2.5vmin;
-        left: 0;
-        right: 0;
+
+      /* Idle state shown until the first game state arrives. */
+      .idle {
         text-align: center;
-        font-size: 2.2vmin;
-        letter-spacing: 0.25em;
-        color: var(--accent);
-        opacity: 0.8;
-      }
-      #log {
-        margin-top: 2vmin;
-        width: min(90vw, 1200px);
-        max-height: 34vh;
-        overflow: hidden;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 2.4vmin;
-        text-align: left;
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
-        padding-top: 1.6vmin;
-      }
-      #log .line {
-        white-space: pre-wrap;
-        word-break: break-word;
-        padding: 0.4vmin 0;
         color: var(--dim);
       }
-      #log .line.rx { color: var(--fg); }
-      #log .line .t { color: #5aa9ff; }
+      .idle__badge {
+        font-size: 7vmin;
+        font-weight: 800;
+        color: var(--fg);
+        margin-bottom: 1.5vmin;
+      }
+      .idle__sub { font-size: 3vmin; }
+
+      /* Rendered board (see renderers/ring-target-board.js). */
+      .rcv { width: min(92vw, 1600px); }
+      .rcv-status {
+        display: flex;
+        align-items: baseline;
+        gap: 2vmin;
+        margin-bottom: 2.5vmin;
+        font-size: 3.4vmin;
+      }
+      .rcv-status__name { font-weight: 800; }
+      .rcv-status__meta { color: var(--dim); font-size: 2.6vmin; }
+      .rcv-status--done { color: var(--leader); font-weight: 800; }
+
+      .sb__grid {
+        display: grid;
+        grid-template-columns: minmax(18vw, 1fr) repeat(var(--sb-rounds), 1fr) 1fr;
+        gap: 0.6vmin;
+        width: 100%;
+      }
+      .sb__row { display: contents; }
+      .sb__cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.6vmin 1vmin;
+        font-size: 3.4vmin;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 1vmin;
+      }
+      .sb__cell--name { justify-content: flex-start; gap: 1vmin; font-weight: 700; }
+      .sb__cell--total { font-weight: 800; }
+      .sb__cell--head {
+        background: transparent;
+        color: var(--dim);
+        font-size: 2.6vmin;
+        letter-spacing: 0.08em;
+      }
+      .sb__cell--empty { color: var(--dim); }
+      .sb__row--leader .sb__cell { background: rgba(255, 209, 102, 0.12); }
+      .sb__row--active .sb__cell { outline: 0.3vmin solid var(--active); }
+      .sb__crown { font-size: 3vmin; }
     </style>
   </head>
 
   <body>
-    <div class="throwaway">PIPELINE TEST — THROWAWAY RECEIVER</div>
-
-    <div id="app">
-      <div class="badge">✅ RECEIVER LIVE</div>
-      <div class="sub">
-        If you can read this on the projector, the Chromecast launched our
-        custom receiver. The App ID resolved and the receiver is running.
+    <div id="board-root">
+      <div class="idle">
+        <div class="idle__badge">Axe Throw</div>
+        <div class="idle__sub">Waiting for the tablet to start a game…</div>
       </div>
-      <div class="ns" id="ns">urn:x-cast:com.hitz.axethrow</div>
-      <div class="sub">
-        Any message sent from the tablet on this channel will appear below.
-      </div>
-      <div id="log" aria-live="polite"></div>
     </div>
 
+    <!-- Renderers must be loaded before the message listener can route to them. -->
+    <script src="renderers/ring-target-board.js"></script>
+    <script src="renderers/index.js"></script>
+
     <script>
-      // ---- Config -------------------------------------------------------
-      // Custom message channel. The SENDER (tablet) must use this EXACT same
-      // string when it sends messages, or nothing will arrive here.
+      // Custom message channel. MUST match CastPlugin.java's NAMESPACE exactly,
+      // character for character — the NO-SUFFIX form. A mismatch means messages
+      // arrive nowhere and the board silently never updates.
       const NAMESPACE = 'urn:x-cast:com.hitz.axethrow';
 
-      // ---- Tiny on-screen logger ---------------------------------------
-      // So you can see activity on the projector itself without a laptop
-      // attached — useful when the client is doing the cast setup in the venue.
-      const logEl = document.getElementById('log');
-      function log(msg, isRx) {
-        const line = document.createElement('div');
-        line.className = 'line' + (isRx ? ' rx' : '');
-        const time = new Date().toLocaleTimeString();
-        line.innerHTML =
-          '<span class="t">[' + time + ']</span> ' +
-          String(msg).replace(/[<>&]/g, (c) =>
-            ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])
-          );
-        logEl.prepend(line);
-        // Keep the log short so it never grows off-screen on the projector.
-        while (logEl.children.length > 12) logEl.lastChild.remove();
-      }
-
-      // ---- CAF receiver bootstrap --------------------------------------
+      const boardRoot = document.getElementById('board-root');
       const context = cast.framework.CastReceiverContext.getInstance();
 
-      // IMPORTANT #1: the custom namespace must be declared BEFORE start().
-      // Registering a listener on it here also implicitly declares it.
+      // Namespace listener must be registered BEFORE context.start(). Each message
+      // is {game, state}; hand it to the router, which picks the right renderer.
       context.addCustomMessageListener(NAMESPACE, (event) => {
-        // event.data is whatever the sender passed to sendMessage(...).
-        let payload;
         try {
-          payload =
-            typeof event.data === 'string'
-              ? event.data
-              : JSON.stringify(event.data);
-        } catch {
-          payload = '[unserializable payload]';
+          const { game, state } =
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          window.renderers.render(game, state, boardRoot);
+        } catch (err) {
+          // A malformed payload must never crash the projected display.
+          console.error('Bad Cast payload:', err, event.data);
         }
-        log('◀ received: ' + payload, true);
       });
 
       const options = new cast.framework.CastReceiverOptions();
-      // IMPORTANT #2: without this, CAF assumes we're a media app and tears
-      // the receiver down for "inactivity" between messages — which for a
-      // scoreboard (long gaps between throws) would kill the projection.
+      // A scoreboard has long gaps between throws; without this CAF would treat
+      // the idle time as inactivity and tear the receiver down mid-game.
       options.disableIdleTimeout = true;
 
-      // Log the lifecycle so the projector itself shows what's happening
-      // during the client's cast setup.
-      context.addEventListener(
-        cast.framework.system.EventType.READY,
-        () => log('receiver READY — listening on ' + NAMESPACE)
-      );
-      context.addEventListener(
-        cast.framework.system.EventType.SENDER_CONNECTED,
-        (e) => log('sender connected: ' + (e.senderId || '(unknown)'))
-      );
-      context.addEventListener(
-        cast.framework.system.EventType.SENDER_DISCONNECTED,
-        (e) => log('sender disconnected: ' + (e.senderId || '(unknown)'))
-      );
-
-      // IMPORTANT #3: start() comes LAST, after the namespace listener and
-      // options are set up.
+      // start() comes LAST, after the listener and options are set up.
       context.start(options);
     </script>
   </body>
