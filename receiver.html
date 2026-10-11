@@ -8,99 +8,27 @@
     <!--
       Google Cast receiver for the HitzAxeThrow scoreboard.
 
-      Listens on the custom namespace for {game, state} messages pushed by the
-      tablet (CastPlugin.java -> src/lib/cast.js) and renders the matching board
-      via renderers/index.js. Display-only: the projector never captures input.
+      Listens on the custom namespace for {game, view, layout} messages pushed by
+      the tablet (CastPlugin.java -> src/lib/cast.js) and renders the matching
+      board via renderers/index.js. Display-only: the projector never captures
+      input, and never runs game logic — the tablet sends a ready-to-paint view
+      model plus the per-game stage layout staff calibrated.
 
       NAMESPACE must be the NO-SUFFIX form and match CastPlugin.java exactly.
       (The old receiver-spike/ in the tablet repo can now be deleted.)
     -->
 
     <!-- Google Cast Application Framework (CAF) receiver SDK — hosted; only runs
-         inside the Chromecast's own environment, which is where this page lives. -->
+         inside the Chromecast's own environment, which is where this page lives.
+         NOTE: opening this file in a normal browser will spam
+         ws://localhost:8008 WebSocket errors — that port only exists on a real
+         Cast device. To check the boards' look on a desktop, open preview.html
+         instead (same renderers + CSS, without this SDK). -->
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 
-    <style>
-      :root {
-        --bg: #0b0f14;
-        --fg: #f4f6fb;
-        --dim: #7f8ea3;
-        --accent: #ff4b4b;
-        --leader: #ffd166;
-        --active: rgba(90, 169, 255, 0.18);
-        --line: rgba(255, 255, 255, 0.14);
-      }
-      * { box-sizing: border-box; }
-      html, body {
-        margin: 0;
-        height: 100%;
-        background: var(--bg);
-        color: var(--fg);
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      }
-      #board-root {
-        min-height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 4vmin;
-      }
-
-      /* Idle state shown until the first game state arrives. */
-      .idle {
-        text-align: center;
-        color: var(--dim);
-      }
-      .idle__badge {
-        font-size: 7vmin;
-        font-weight: 800;
-        color: var(--fg);
-        margin-bottom: 1.5vmin;
-      }
-      .idle__sub { font-size: 3vmin; }
-
-      /* Rendered board (see renderers/ring-target-board.js). */
-      .rcv { width: min(92vw, 1600px); }
-      .rcv-status {
-        display: flex;
-        align-items: baseline;
-        gap: 2vmin;
-        margin-bottom: 2.5vmin;
-        font-size: 3.4vmin;
-      }
-      .rcv-status__name { font-weight: 800; }
-      .rcv-status__meta { color: var(--dim); font-size: 2.6vmin; }
-      .rcv-status--done { color: var(--leader); font-weight: 800; }
-
-      .sb__grid {
-        display: grid;
-        grid-template-columns: minmax(18vw, 1fr) repeat(var(--sb-rounds), 1fr) 1fr;
-        gap: 0.6vmin;
-        width: 100%;
-      }
-      .sb__row { display: contents; }
-      .sb__cell {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.6vmin 1vmin;
-        font-size: 3.4vmin;
-        background: rgba(255, 255, 255, 0.04);
-        border-radius: 1vmin;
-      }
-      .sb__cell--name { justify-content: flex-start; gap: 1vmin; font-weight: 700; }
-      .sb__cell--total { font-weight: 800; }
-      .sb__cell--head {
-        background: transparent;
-        color: var(--dim);
-        font-size: 2.6vmin;
-        letter-spacing: 0.08em;
-      }
-      .sb__cell--empty { color: var(--dim); }
-      .sb__row--leader .sb__cell { background: rgba(255, 209, 102, 0.12); }
-      .sb__row--active .sb__cell { outline: 0.3vmin solid var(--active); }
-      .sb__crown { font-size: 3vmin; }
-    </style>
+    <!-- All board styling lives here, shared with preview.html so the two can
+         never drift. -->
+    <link rel="stylesheet" href="styles/receiver.css" />
   </head>
 
   <body>
@@ -111,8 +39,16 @@
       </div>
     </div>
 
-    <!-- Renderers must be loaded before the message listener can route to them. -->
+    <!-- Renderers must be loaded before the message listener can route to them.
+         targets.js (the static target faces) loads first because the ring/
+         dartboard renderers call window.receiverTargets. Each renderer defines a
+         window.render* function; index.js maps game keys to them. -->
+    <script src="renderers/targets.js"></script>
     <script src="renderers/ring-target-board.js"></script>
+    <script src="renderers/dartboard-board.js"></script>
+    <script src="renderers/tictactoe-board.js"></script>
+    <script src="renderers/connect4-board.js"></script>
+    <script src="renderers/pairs-board.js"></script>
     <script src="renderers/index.js"></script>
 
     <script>
@@ -125,12 +61,14 @@
       const context = cast.framework.CastReceiverContext.getInstance();
 
       // Namespace listener must be registered BEFORE context.start(). Each message
-      // is {game, state}; hand it to the router, which picks the right renderer.
+      // is {game, view, layout} — a ready-to-paint view model plus the per-game
+      // stage layout; hand it to the router, which picks the right renderer and
+      // positions its parts.
       context.addCustomMessageListener(NAMESPACE, (event) => {
         try {
-          const { game, state } =
+          const { game, view, layout } =
             typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-          window.renderers.render(game, state, boardRoot);
+          window.renderers.render(game, view, layout, boardRoot);
         } catch (err) {
           // A malformed payload must never crash the projected display.
           console.error('Bad Cast payload:', err, event.data);

@@ -1,0 +1,513 @@
+/*
+ * receiver.css — shared styling for the HitzAxeThrow Cast receiver.
+ *
+ * Linked by BOTH receiver.html (the real Chromecast page) and preview.html
+ * (the hardware-free verification harness), so what you see in the preview is
+ * pixel-identical to what casts to the projector. Keep all board styling here —
+ * never inline it in receiver.html again — so the two pages can never drift.
+ *
+ * Sizing uses vmin throughout so every board scales to fill a 1080p TV the same
+ * way it fills the preview viewport.
+ */
+
+:root {
+  --bg: #0b0f14;
+  --fg: #f4f6fb;
+  --dim: #7f8ea3;
+  --accent: #ff4b4b;
+  --leader: #ffd166;
+  --active: rgba(90, 169, 255, 0.18);
+  --line: rgba(255, 255, 255, 0.14);
+
+  /* Per-game player colours, kept in sync with the tablet UI. */
+  --x: #ff4b4b; /* tic-tac-toe X */
+  --o: #4d9bff; /* tic-tac-toe O */
+  --c4-a: #ff5a3c; /* connect 4 player 0 */
+  --c4-b: #37c8ab; /* connect 4 player 1 */
+  --match: #49d08b; /* pairs matched */
+  --leftover: #b58cff; /* pairs leftover card */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+#board-root {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * Stage layout engine. The stage is the full 16:9 cast output; the
+ * tablet calibrates two regions (primary = target/board, secondary =
+ * scoreboard/status) as normalised rects in 0..1 of this stage, so a
+ * rect of {0,0,1,1} fills the whole screen. index.js positions each
+ * region absolutely from those rects.
+ * ------------------------------------------------------------------ */
+.stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: min(100vw, 177.78vh);
+  height: min(56.25vw, 100vh);
+}
+.stage__region {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* The primary region may be rotated (0/90/180/270°) via an inline transform set
+ * by the layout engine; rotate about the box centre and let a quarter-turn show
+ * without being clipped by the region's own bounds. */
+.stage__region--primary {
+  transform-origin: center center;
+  overflow: visible;
+}
+/* The target/board face fills its region, centred, keeping aspect. SVG
+ * faces (viewBox 0 0 1000 1000) scale perfectly to whatever box staff set. */
+.stage__region--primary svg {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Idle state shown until the first game state arrives. */
+.idle {
+  text-align: center;
+  color: var(--dim);
+  padding: 4vmin;
+}
+.idle__badge {
+  font-size: 7vmin;
+  font-weight: 800;
+  color: var(--fg);
+  margin-bottom: 1.5vmin;
+}
+.idle__sub {
+  font-size: 3vmin;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shared board chrome: status line + a generic scoreboard grid used
+ * by the ring-target family and the dartboard.
+ * ------------------------------------------------------------------ */
+.rcv {
+  width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+/* Wrapper for board games whose secondary region is just the status line;
+ * centres it within its (usually short, wide) region. */
+.rcv-status-wrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rcv-status-wrap .rcv-status {
+  margin-bottom: 0;
+}
+.rcv-status {
+  display: flex;
+  align-items: baseline;
+  gap: 2vmin;
+  margin-bottom: 2.5vmin;
+  font-size: 3.4vmin;
+}
+.rcv-status__name {
+  font-weight: 800;
+}
+.rcv-status__meta {
+  color: var(--dim);
+  font-size: 2.6vmin;
+}
+.rcv-status--done {
+  color: var(--leader);
+  font-weight: 800;
+}
+
+.sb__grid {
+  display: grid;
+  grid-template-columns: minmax(18vw, 1fr) repeat(var(--sb-rounds), 1fr) 1fr;
+  gap: 0.6vmin;
+  width: 100%;
+}
+.sb__row {
+  display: contents;
+}
+.sb__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.6vmin 1vmin;
+  font-size: 3.4vmin;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 1vmin;
+}
+.sb__cell--name {
+  justify-content: flex-start;
+  gap: 1vmin;
+  font-weight: 700;
+}
+.sb__cell--total {
+  font-weight: 800;
+}
+.sb__cell--head {
+  background: transparent;
+  color: var(--dim);
+  font-size: 2.6vmin;
+  letter-spacing: 0.08em;
+}
+.sb__cell--empty {
+  color: var(--dim);
+}
+.sb__row--leader .sb__cell {
+  background: rgba(255, 209, 102, 0.12);
+}
+.sb__row--active .sb__cell {
+  outline: 0.3vmin solid var(--active);
+}
+.sb__crown {
+  font-size: 3vmin;
+}
+
+/* ------------------------------------------------------------------ *
+ * Dartboard (501): a two-column count-down scoreboard. Big remaining
+ * number per player; leader = fewest remaining once play starts.
+ * ------------------------------------------------------------------ */
+.db {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vmin;
+}
+.db__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2vmin;
+  padding: 2.2vmin 3vmin;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 1.4vmin;
+}
+.db__row--leader {
+  background: rgba(255, 209, 102, 0.12);
+}
+.db__row--active {
+  outline: 0.35vmin solid var(--active);
+}
+.db__row--winner {
+  background: rgba(73, 208, 139, 0.16);
+}
+.db__name {
+  display: flex;
+  align-items: center;
+  gap: 1.4vmin;
+  font-size: 4.4vmin;
+  font-weight: 800;
+}
+.db__crown {
+  font-size: 3.8vmin;
+}
+.db__remaining {
+  font-size: 7vmin;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.db__remaining--out {
+  color: var(--match);
+}
+
+/* ------------------------------------------------------------------ *
+ * Tic-Tac-Toe: 3x3 grid of big glowing marks.
+ * ------------------------------------------------------------------ */
+.ttt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3vmin;
+}
+.ttt__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 1.4vmin;
+  width: min(70vmin, 70vh);
+  aspect-ratio: 1 / 1;
+}
+.ttt__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0.25vmin solid var(--line);
+  border-radius: 2vmin;
+  font-size: 18vmin;
+  font-weight: 800;
+  line-height: 1;
+}
+.ttt__cell--x {
+  color: var(--x);
+  text-shadow: 0 0 3vmin rgba(255, 75, 75, 0.55);
+}
+.ttt__cell--o {
+  color: var(--o);
+  text-shadow: 0 0 3vmin rgba(77, 155, 255, 0.55);
+}
+.ttt__cell--win {
+  background: rgba(255, 209, 102, 0.14);
+  border-color: var(--leader);
+}
+
+/* ------------------------------------------------------------------ *
+ * Connect 4: blue frame, discs drop into a 7x6 grid.
+ * ------------------------------------------------------------------ */
+.c4 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3vmin;
+}
+.c4__frame {
+  background: #1b49b8;
+  padding: 2vmin;
+  border-radius: 2.4vmin;
+  box-shadow: inset 0 0 4vmin rgba(0, 0, 0, 0.35);
+}
+.c4__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 1.1vmin;
+}
+.c4__cell {
+  width: 9.5vmin;
+  height: 9.5vmin;
+  max-width: 11vw;
+  max-height: 11vw;
+  border-radius: 50%;
+  background: #0b0f14;
+  box-shadow: inset 0 0.6vmin 1.2vmin rgba(0, 0, 0, 0.6);
+}
+.c4__cell--a {
+  background: radial-gradient(circle at 35% 30%, #ff8266, var(--c4-a) 70%);
+}
+.c4__cell--b {
+  background: radial-gradient(circle at 35% 30%, #6fe6d0, var(--c4-b) 70%);
+}
+.c4__cell--win {
+  outline: 0.5vmin solid var(--leader);
+  outline-offset: -0.5vmin;
+}
+
+/* ------------------------------------------------------------------ *
+ * Pairs: 3x3 memory cards.
+ * ------------------------------------------------------------------ */
+.pairs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3vmin;
+}
+.pairs__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 1.8vmin;
+  width: min(72vmin, 72vh);
+  aspect-ratio: 1 / 1;
+}
+.pairs__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0.25vmin solid var(--line);
+  border-radius: 2vmin;
+  font-weight: 800;
+  line-height: 1;
+}
+.pairs__card--down {
+  color: var(--dim);
+  font-size: 10vmin;
+}
+.pairs__card--up {
+  background: #f4f6fb;
+  color: #0b0f14;
+}
+.pairs__card--red {
+  color: #d63a2f;
+}
+.pairs__card--black {
+  color: #10141a;
+}
+.pairs__card--matched {
+  outline: 0.5vmin solid var(--match);
+  outline-offset: -0.5vmin;
+}
+.pairs__card--leftover {
+  outline: 0.5vmin solid var(--leftover);
+  outline-offset: -0.5vmin;
+}
+.pairs__rank {
+  font-size: 9vmin;
+}
+.pairs__suit {
+  font-size: 6vmin;
+}
+.pairs__joker {
+  font-size: 4.5vmin;
+  color: #8a2be2;
+  text-align: center;
+}
+.pairs__joker-star {
+  font-size: 8vmin;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ring-target faces (Axe Classic / WATL / IATF). These paint the actual
+ * target projected onto the physical wooden board, so the geometry and
+ * colours are ported verbatim from the tablet (src/styles/main.css
+ * .rt__* block). Drawn display-only by renderers/targets.js — no tap
+ * targets, so the interactive .tb__zone rules are dropped.
+ * ------------------------------------------------------------------ */
+.rt__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.rt__field {
+  fill: #0b0f14;
+}
+.rt__disc {
+  fill: #0a0a0b;
+}
+.rt__line {
+  fill: none;
+  stroke: #f4f4f2;
+}
+.rt__cluster {
+  fill: #d63a2f;
+  stroke: #f4f4f2;
+  stroke-width: 3;
+}
+.rt__killshot {
+  fill: #2f6fd6;
+  stroke: #f4f4f2;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 9px rgba(47, 111, 214, 0.6));
+}
+.rt__clutch {
+  fill: #2f6fd6;
+  stroke: #eef4ff;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 10px rgba(47, 111, 214, 0.6));
+}
+/* Ring point numerals along the horizontal centre line (sized in viewBox
+ * units; the SVG is 0..1000). */
+.rt__num {
+  fill: #f4f4f2;
+  font-size: 52px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 5;
+}
+/* Recent-throw markers: a glowing dot + value where each throw this round
+ * scored. Position is computed by targets.js (we only know the scored ring,
+ * not the exact landing point). */
+.rt__mark-dot {
+  fill: #ffd166;
+  stroke: #0a0a0b;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 7px rgba(255, 209, 102, 0.7));
+}
+.rt__mark-num {
+  fill: #0a0a0b;
+  font-size: 30px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ *
+ * 501 dartboard face, ported verbatim from the tablet (src/styles/main.css
+ * .db__* block). Display-only: no hover/press/focus states.
+ * ------------------------------------------------------------------ */
+.db__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 20px 44px rgba(0, 0, 0, 0.6));
+}
+.db__num {
+  fill: #efeadf;
+  font-weight: 700;
+  font-size: 46px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  letter-spacing: 0.5px;
+}
+/* Darts thrown so far this visit, shown as chips under the scoreboard (a
+ * value like 20 is ambiguous between single/double/triple, so it can't be
+ * pinned to a wedge on the static board). */
+.db__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4vmin;
+  margin-top: 2.5vmin;
+}
+.db__chip {
+  min-width: 7vmin;
+  padding: 1vmin 2vmin;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1.2vmin;
+  font-size: 4vmin;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ *
+ * Primary-region fit for the flat game boards (ttt / connect4 / pairs).
+ * Their grids are square, so fill the region height and let width follow,
+ * capped to the region — this makes region resize actually scale the board.
+ * ------------------------------------------------------------------ */
+.stage__region--primary .ttt,
+.stage__region--primary .c4,
+.stage__region--primary .pairs {
+  width: 100%;
+  height: 100%;
+  gap: 0;
+  justify-content: center;
+}
+.stage__region--primary .ttt__grid,
+.stage__region--primary .pairs__grid {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+.stage__region--primary .c4__frame {
+  max-width: 100%;
+  max-height: 100%;
+}

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Axe Throw — Receiver Preview</title>
+
+    <!--
+      Hardware-free preview of the Cast receiver boards.
+
+      Loads the SAME renderers and the SAME styles/receiver.css that the real
+      receiver.html uses, so what you see here is pixel-identical to what casts
+      to the projector — but WITHOUT the CAF receiver SDK, so there is no
+      ws://localhost:8008 connection and none of the WebSocket errors you get
+      from opening receiver.html in a browser.
+
+      Open this file directly (double-click) or serve the folder and visit
+      /preview.html. Use the tabs at the top to switch game/state.
+    -->
+
+    <link rel="stylesheet" href="styles/receiver.css" />
+    <style>
+      /* Preview chrome only — NOT part of the cast receiver. */
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+      #preview-bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: #05080c;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      #preview-bar button {
+        font: inherit;
+        font-size: 0.85rem;
+        color: var(--fg);
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 0.5rem;
+        padding: 0.4rem 0.7rem;
+        cursor: pointer;
+      }
+      #preview-bar button:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      #preview-bar button[aria-current='true'] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        font-weight: 700;
+      }
+      #stage {
+        flex: 1;
+        display: flex;
+        position: relative;
+      }
+      /* Re-point #board-root inside the stage (receiver.css sizes it to fill). */
+      #board-root {
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav id="preview-bar" aria-label="Preview states"></nav>
+    <div id="stage">
+      <div id="board-root">
+        <div class="idle">
+          <div class="idle__badge">Axe Throw</div>
+          <div class="idle__sub">Waiting for the tablet to start a game…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Same renderers the real receiver loads, plus the preview fixtures.
+         targets.js first — the ring/dartboard renderers call window.receiverTargets. -->
+    <script src="renderers/targets.js"></script>
+    <script src="renderers/ring-target-board.js"></script>
+    <script src="renderers/dartboard-board.js"></script>
+    <script src="renderers/tictactoe-board.js"></script>
+    <script src="renderers/connect4-board.js"></script>
+    <script src="renderers/pairs-board.js"></script>
+    <script src="renderers/index.js"></script>
+    <script src="renderers/fixtures.js"></script>
+
+    <script>
+      const boardRoot = document.getElementById('board-root');
+      const bar = document.getElementById('preview-bar');
+
+      const IDLE_HTML =
+        '<div class="idle"><div class="idle__badge">Axe Throw</div>' +
+        '<div class="idle__sub">Waiting for the tablet to start a game…</div></div>';
+
+      function show(fixture) {
+        if (!fixture.game) {
+          boardRoot.innerHTML = IDLE_HTML;
+          return;
+        }
+        // Exact same call receiver.html makes for an incoming Cast message.
+        // layout is optional — when a fixture omits it, index.js uses the
+        // per-game defaults, which is what the projector shows before any
+        // calibration is saved.
+        window.renderers.render(fixture.game, fixture.view, fixture.layout, boardRoot);
+      }
+
+      (window.FIXTURES || []).forEach((fixture, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = fixture.label;
+        btn.addEventListener('click', () => {
+          show(fixture);
+          [...bar.children].forEach((b) => b.removeAttribute('aria-current'));
+          btn.setAttribute('aria-current', 'true');
+        });
+        bar.append(btn);
+        if (i === 0) btn.setAttribute('aria-current', 'true');
+      });
+    </script>
+  </body>
+</html>
