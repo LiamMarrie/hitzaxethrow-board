@@ -41,8 +41,8 @@ const THROWING = new Set(['target', 'watl', 'iatf', 'dartboard']);
 
 // Fallback layouts, identical to cast-layout.js's THROWING_DEFAULT / BOARD_DEFAULT.
 const THROWING_DEFAULT = {
-  primary: { x: 0.03, y: 0.05, w: 0.62, h: 0.9 },
-  secondary: { x: 0.67, y: 0.08, w: 0.3, h: 0.84 },
+  primary: { x: 0.22, y: 0.2, w: 0.56, h: 0.76 },
+  secondary: { x: 0.1, y: 0.03, w: 0.8, h: 0.13 },
 };
 const BOARD_DEFAULT = {
   primary: { x: 0.21, y: 0.16, w: 0.58, h: 0.8 },
@@ -64,6 +64,46 @@ function regionBox(rect, fallback) {
   box.style.height = `${(r.h ?? fallback.h) * 100}%`;
   return box;
 }
+
+// Largest scale-up the secondary fit will apply, so a scoreboard box made huge
+// doesn't blow a one-line status up to billboard size.
+const MAX_FIT = 3;
+
+// The last-rendered secondary region, re-fitted when the viewport resizes.
+let lastFit = null;
+
+/**
+ * Scale the secondary content (scoreboard / status) to fit its region. The
+ * content is sized in vmin, so on its own it ignores the region staff set: a
+ * short region crops it, and the editor's Scale button only resizes an empty
+ * box. Instead, lay the content out, measure it, and scale it uniformly so it
+ * fills the region without clipping — then centre it. Laid out a second time at
+ * the width the scaled result will occupy, so a shrunk scoreboard still spans
+ * its region rather than sitting in a narrow column.
+ */
+function fitToBox(box, fit) {
+  const bw = box.clientWidth;
+  const bh = box.clientHeight;
+  if (!bw || !bh) return; // not laid out (e.g. jsdom smoke test)
+
+  const measure = (width) => {
+    fit.style.width = `${width}px`;
+    return { w: Math.max(fit.scrollWidth, fit.offsetWidth), h: fit.offsetHeight };
+  };
+
+  fit.style.transform = '';
+  let { w, h } = measure(bw);
+  if (!w || !h) return;
+  ({ w, h } = measure(bw / Math.min(bw / w, bh / h, MAX_FIT)));
+  const s = Math.min(bw / w, bh / h, MAX_FIT);
+  const dx = (bw - w * s) / 2;
+  const dy = (bh - h * s) / 2;
+  fit.style.transform = `translate(${dx}px, ${dy}px) scale(${s})`;
+}
+
+window.addEventListener('resize', () => {
+  if (lastFit) fitToBox(lastFit.box, lastFit.fit);
+});
 
 window.renderers = {
   /**
@@ -99,10 +139,17 @@ window.renderers = {
     if (parts.secondary) {
       const box = regionBox(lay.secondary, def.secondary);
       box.classList.add('stage__region--secondary');
-      box.append(parts.secondary);
+      const fit = document.createElement('div');
+      fit.className = 'stage__fit';
+      fit.append(parts.secondary);
+      box.append(fit);
       stage.append(box);
+      lastFit = { box, fit };
+    } else {
+      lastFit = null;
     }
 
     container.replaceChildren(stage);
+    if (lastFit) fitToBox(lastFit.box, lastFit.fit);
   },
 };

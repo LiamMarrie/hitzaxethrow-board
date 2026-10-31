@@ -39,6 +39,9 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  /* A calibrated target may run past the frame edge; never let that add
+   * scrollbars or shift the page on the Chromecast. */
+  overflow: hidden;
 }
 
 #board-root {
@@ -77,6 +80,22 @@ body {
 }
 /* The target/board face fills its region, centred, keeping aspect. SVG
  * faces (viewBox 0 0 1000 1000) scale perfectly to whatever box staff set. */
+.stage__region--secondary {
+  display: block;
+  overflow: visible;
+}
+/* Scoreboard / status content, scaled to fit its region by index.js
+ * (fitToBox) so it fills the box staff calibrated and is never clipped. */
+.stage__fit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.stage__fit .rcv {
+  max-height: none;
+  overflow: visible;
+}
 .stage__region--primary svg {
   width: 100%;
   height: 100%;
@@ -141,7 +160,7 @@ body {
 
 .sb__grid {
   display: grid;
-  grid-template-columns: minmax(18vw, 1fr) repeat(var(--sb-rounds), 1fr) 1fr;
+  grid-template-columns: minmax(max-content, 1fr) repeat(var(--sb-rounds), 1fr) 1fr;
   gap: 0.6vmin;
   width: 100%;
 }
