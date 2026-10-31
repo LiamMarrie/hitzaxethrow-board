@@ -118,6 +118,11 @@ body {
 .idle__sub {
   font-size: 3vmin;
 }
+.idle__build {
+  margin-top: 4vmin;
+  font-size: 1.8vmin;
+  opacity: 0.45;
+}
 
 /* ------------------------------------------------------------------ *
  * Shared board chrome: status line + a generic scoreboard grid used
