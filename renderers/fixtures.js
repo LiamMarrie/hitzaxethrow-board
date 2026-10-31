@@ -49,6 +49,28 @@
     ],
   };
 
+  // Full lane: 6 players with max-length (12-char) names, in the default strip
+  // and in a small reduced box like staff calibrate on real boards.
+  const sixNames = ['Christopher', 'Maximilian12', 'Alexandra', 'Bo', 'Jonathan', 'Sam'];
+  const sixMid = {
+    kind: 'ring',
+    rounds: 5,
+    recentThrows: [4],
+    status: { done: false, name: 'Bo', meta: 'Round 3 · Throw 2 of 5' },
+    rows: sixNames.map((name, i) => ({
+      name,
+      total: [44, 51, 38, 30, 47, 29][i],
+      leader: i === 1,
+      active: i === 3,
+      cells: ringCells(i < 3 ? [20, 18 + i, 6] : [15, 11 + i], 5),
+    })),
+  };
+  const smallBox = {
+    primary: { x: 0.22, y: 0.2, w: 0.56, h: 0.76 },
+    secondary: { x: 0.25, y: 0.05, w: 0.5, h: 0.1 },
+    rotation: 0,
+  };
+
   const iatfComplete = {
     kind: 'ring',
     rounds: 5,
@@ -192,6 +214,8 @@
     { label: 'Axe Classic — CAL: shifted/scaled', game: 'target', view: targetMid, layout: calibratedShift },
     { label: 'Axe Classic — CAL: rotated 90°', game: 'target', view: targetMid, layout: calibratedRotated },
     { label: 'WATL — mid (3P)', game: 'watl', view: watlMid },
+    { label: 'Axe Classic — 6P', game: 'target', view: sixMid },
+    { label: 'Axe Classic — 6P small box', game: 'target', view: sixMid, layout: smallBox },
     { label: 'IATF — complete', game: 'iatf', view: iatfComplete },
     { label: '501 — mid', game: 'dartboard', view: dartMid },
     { label: '501 — win', game: 'dartboard', view: dartWin },

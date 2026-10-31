@@ -163,11 +163,24 @@ body {
   font-weight: 800;
 }
 
+/* Ring scoreboard: players split across 1..3 side-by-side panels (index.js
+ * picks the count that fits the calibrated box largest). Everything is packed
+ * tight, because the region is often small and the fit scale, not the font
+ * size, decides how big the names end up on the board. */
+.sb {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.4em;
+  font-size: 4vmin;
+}
+.sb__done {
+  margin-bottom: 0.3em;
+}
 .sb__grid {
   display: grid;
-  grid-template-columns: minmax(max-content, 1fr) repeat(var(--sb-rounds), 1fr) 1fr;
-  gap: 0.6vmin;
-  width: 100%;
+  /* Columns hug their text: name | one per round | total. */
+  /* No column gap (cell padding spaces them) so the active row's fill is solid. */
+  grid-template-columns: max-content repeat(var(--sb-rounds), minmax(2.4ch, max-content)) max-content;
 }
 .sb__row {
   display: contents;
@@ -176,36 +189,54 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.6vmin 1vmin;
-  font-size: 3.4vmin;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 1vmin;
+  padding: 0.05em 0.22em;
+  line-height: 1.15;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .sb__cell--name {
   justify-content: flex-start;
-  gap: 1vmin;
-  font-weight: 700;
-}
-.sb__cell--total {
+  gap: 0.2em;
+  padding-right: 0.35em;
   font-weight: 800;
 }
+/* Long names would widen every panel and shrink the whole board. */
+.sb__playername {
+  max-width: 10ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb__cell--total {
+  padding-left: 0.35em;
+  font-weight: 900;
+}
 .sb__cell--head {
-  background: transparent;
+  padding-top: 0;
+  padding-bottom: 0;
   color: var(--dim);
-  font-size: 2.6vmin;
-  letter-spacing: 0.08em;
+  font-size: 0.6em;
+  line-height: 1;
 }
 .sb__cell--empty {
   color: var(--dim);
 }
-.sb__row--leader .sb__cell {
-  background: rgba(255, 209, 102, 0.12);
+.sb__row--leader .sb__cell--name,
+.sb__row--leader .sb__cell--total {
+  color: var(--leader);
 }
+/* Whose turn: a solid fill (an outline washes out on a projector). */
 .sb__row--active .sb__cell {
-  outline: 0.3vmin solid var(--active);
+  background: rgba(90, 169, 255, 0.45);
+}
+.sb__row--active .sb__cell:first-child {
+  border-radius: 0.2em 0 0 0.2em;
+}
+.sb__row--active .sb__cell:last-child {
+  border-radius: 0 0.2em 0.2em 0;
 }
 .sb__crown {
-  font-size: 3vmin;
+  font-size: 0.8em;
 }
 
 /* ------------------------------------------------------------------ *

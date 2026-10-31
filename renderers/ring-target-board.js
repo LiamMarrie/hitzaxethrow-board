@@ -10,7 +10,9 @@
  * Returns { primary, secondary } for the stage layout engine (index.js):
  *   - primary   = the static target face (targets.js), with markers for the
  *                 active thrower's throws so far this round (view.recentThrows)
- *   - secondary = the bowling-style scoreboard (status line + per-round grid)
+ *   - secondary = the bowling-style scoreboard (per-round grid), plus
+ *                 secondaryVariants: the same board split into 1..3 side-by-side
+ *                 panels, for index.js to pick whichever fits its box best
  *
  * View shape:
  *   { kind:'ring', rounds:number, recentThrows:number[],
@@ -36,30 +38,21 @@
     return node;
   }
 
-  function renderStatus(status) {
-    if (!status) return el('div', { class: 'rcv-status', text: '—' });
-    if (status.done) {
-      return el('div', {
-        class: 'rcv-status rcv-status--done',
-        text: status.meta || 'Game complete',
-      });
-    }
-    return el('div', { class: 'rcv-status' }, [
-      el('span', { class: 'rcv-status__name', text: status.name ?? '—' }),
-      el('span', { class: 'rcv-status__meta', text: status.meta ?? '' }),
-    ]);
-  }
+  // Most side-by-side panels the scoreboard will split players into. The layout
+  // engine (index.js) measures each arrangement against the calibrated box and
+  // keeps whichever scales largest, so a wide strip gets 3 short panels and a
+  // narrow box keeps 1 tall one.
+  const MAX_PANELS = 3;
 
-  function renderRingTargetBoard(view, game) {
-    const rounds = view?.rounds ?? 0;
-    const rows = view?.rows ?? [];
-
+  // One mini grid: a header (blank | 1..n | T) then the given player rows. Each
+  // panel carries its own header so it reads on its own.
+  function renderPanel(rows, rounds) {
     const header = el('div', { class: 'sb__row sb__row--head' }, [
-      el('div', { class: 'sb__cell sb__cell--name', text: 'PLAYER' }),
+      el('div', { class: 'sb__cell sb__cell--name sb__cell--head' }),
       ...Array.from({ length: rounds }, (_, i) =>
-        el('div', { class: 'sb__cell sb__cell--head', text: `R${i + 1}` })
+        el('div', { class: 'sb__cell sb__cell--head', text: String(i + 1) })
       ),
-      el('div', { class: 'sb__cell sb__cell--total', text: 'TOTAL' }),
+      el('div', { class: 'sb__cell sb__cell--total sb__cell--head', text: 'T' }),
     ]);
 
     const playerRows = rows.map((row) => {
@@ -87,20 +80,53 @@
       ]);
     });
 
-    const board = el('div', { class: 'sb__grid' }, [header, ...playerRows]);
-    board.style.setProperty('--sb-rounds', String(rounds));
+    const grid = el('div', { class: 'sb__grid' }, [header, ...playerRows]);
+    grid.style.setProperty('--sb-rounds', String(rounds));
+    return grid;
+  }
 
-    const secondary = el('section', { class: 'rcv' }, [
-      renderStatus(view?.status),
-      el('div', { class: 'sb', 'aria-label': 'Scoreboard' }, [board]),
+  // The whole scoreboard with players split evenly across panels of `perPanel`
+  // rows. There's no separate whose-turn line (the active row is filled
+  // instead, which saves a full line of height); only "Game complete" shows.
+  function renderScoreboard(view, perPanel) {
+    const rounds = view?.rounds ?? 0;
+    const rows = view?.rows ?? [];
+    const panels = [];
+    for (let i = 0; i < rows.length; i += perPanel) {
+      panels.push(renderPanel(rows.slice(i, i + perPanel), rounds));
+    }
+    if (!panels.length) panels.push(renderPanel([], rounds));
+
+    const done = view?.status?.done;
+    return el('section', { class: 'rcv' }, [
+      done
+        ? el('div', {
+            class: 'rcv-status rcv-status--done sb__done',
+            text: view.status.meta || 'Game complete',
+          })
+        : '',
+      el('div', { class: 'sb', 'aria-label': 'Scoreboard' }, panels),
     ]);
+  }
+
+  function renderRingTargetBoard(view, game) {
+    const count = Math.max(1, (view?.rows ?? []).length);
+
+    // One candidate per distinct rows-per-panel (e.g. 6 players -> 6, 3, 2).
+    const perPanels = [];
+    for (let p = 1; p <= MAX_PANELS; p++) {
+      const per = Math.ceil(count / p);
+      if (!perPanels.includes(per)) perPanels.push(per);
+    }
+    const secondaryVariants = perPanels.map((per) => renderScoreboard(view, per));
+    const secondary = secondaryVariants[0];
 
     // The target face is a pure drawing owned by the receiver (targets.js); only
     // the dynamic recent-throw values are pushed. buildRingFace needs the
     // specific ring game ('target' | 'watl' | 'iatf') to pick the right geometry.
     const primary = window.receiverTargets.buildRingFace(game, view?.recentThrows ?? []);
 
-    return { primary, secondary };
+    return { primary, secondary, secondaryVariants };
   }
 
   window.renderRingTargetBoard = renderRingTargetBoard;

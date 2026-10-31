@@ -24,7 +24,9 @@
  */
 
 // Each renderer returns { primary, secondary } DOM nodes rather than painting
-// into the container itself, so this module owns all positioning.
+// into the container itself, so this module owns all positioning. A renderer may
+// also return `secondaryVariants` (alternative arrangements of the secondary
+// content); refit() keeps whichever fits the calibrated box largest.
 const RENDERERS = {
   target: renderRingTargetBoard,
   watl: renderRingTargetBoard,
@@ -42,7 +44,7 @@ const THROWING = new Set(['target', 'watl', 'iatf', 'dartboard']);
 // Fallback layouts, identical to cast-layout.js's THROWING_DEFAULT / BOARD_DEFAULT.
 const THROWING_DEFAULT = {
   primary: { x: 0.22, y: 0.2, w: 0.56, h: 0.76 },
-  secondary: { x: 0.1, y: 0.03, w: 0.8, h: 0.13 },
+  secondary: { x: 0.25, y: 0.03, w: 0.5, h: 0.13 },
 };
 const BOARD_DEFAULT = {
   primary: { x: 0.21, y: 0.16, w: 0.58, h: 0.8 },
@@ -79,12 +81,13 @@ let lastFit = null;
  * box. Instead, lay the content out, measure it, and scale it uniformly so it
  * fills the region without clipping — then centre it. Laid out a second time at
  * the width the scaled result will occupy, so a shrunk scoreboard still spans
- * its region rather than sitting in a narrow column.
+ * its region rather than sitting in a narrow column. Returns the scale applied
+ * (0 when the box isn't laid out).
  */
 function fitToBox(box, fit) {
   const bw = box.clientWidth;
   const bh = box.clientHeight;
-  if (!bw || !bh) return; // not laid out (e.g. jsdom smoke test)
+  if (!bw || !bh) return 0; // not laid out (e.g. jsdom smoke test)
 
   const measure = (width) => {
     fit.style.width = `${width}px`;
@@ -93,17 +96,69 @@ function fitToBox(box, fit) {
 
   fit.style.transform = '';
   let { w, h } = measure(bw);
-  if (!w || !h) return;
+  if (!w || !h) return 0;
   ({ w, h } = measure(bw / Math.min(bw / w, bh / h, MAX_FIT)));
+  return place(box, fit, w, h);
+}
+
+/**
+ * Like fitToBox, but at the content's natural (max-content) size — no
+ * re-layout at a wider width. For the ring scoreboard, whose columns hug their
+ * text: stretching it to span the region only spread names and totals to
+ * opposite edges with empty space between.
+ */
+function fitNatural(box, fit) {
+  const bw = box.clientWidth;
+  const bh = box.clientHeight;
+  if (!bw || !bh) return 0;
+
+  fit.style.transform = '';
+  fit.style.width = 'max-content';
+  const w = fit.offsetWidth;
+  const h = fit.offsetHeight;
+  if (!w || !h) return 0;
+  return place(box, fit, w, h);
+}
+
+/** Scale a measured w×h block to fit the box, centre it, and return the scale. */
+function place(box, fit, w, h) {
+  const bw = box.clientWidth;
+  const bh = box.clientHeight;
   const s = Math.min(bw / w, bh / h, MAX_FIT);
   const dx = (bw - w * s) / 2;
   const dy = (bh - h * s) / 2;
   fit.style.transform = `translate(${dx}px, ${dy}px) scale(${s})`;
+  return s;
 }
 
-window.addEventListener('resize', () => {
-  if (lastFit) fitToBox(lastFit.box, lastFit.fit);
-});
+/**
+ * Fit the last-rendered secondary content. When the renderer offered several
+ * arrangements (the ring scoreboard split into 1..3 panels), try each against
+ * the calibrated box and keep whichever ends up scaled largest — so a small or
+ * oddly-shaped box staff calibrated still gets the biggest possible names.
+ */
+function refit() {
+  if (!lastFit) return;
+  const { box, fit, variants } = lastFit;
+  if (!variants) {
+    fitToBox(box, fit);
+    return;
+  }
+  let best = variants[0];
+  let bestScale = -1;
+  for (const v of variants) {
+    fit.replaceChildren(v);
+    const s = fitNatural(box, fit);
+    if (s > bestScale) {
+      best = v;
+      bestScale = s;
+    }
+  }
+  fit.replaceChildren(best);
+  fitNatural(box, fit);
+}
+
+window.addEventListener('resize', refit);
 
 window.renderers = {
   /**
@@ -144,12 +199,13 @@ window.renderers = {
       fit.append(parts.secondary);
       box.append(fit);
       stage.append(box);
-      lastFit = { box, fit };
+      const variants = parts.secondaryVariants?.length ? parts.secondaryVariants : null;
+      lastFit = { box, fit, variants };
     } else {
       lastFit = null;
     }
 
     container.replaceChildren(stage);
-    if (lastFit) fitToBox(lastFit.box, lastFit.fit);
+    refit();
   },
 };

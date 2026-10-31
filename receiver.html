@@ -86,6 +86,22 @@
 
       // start() comes LAST, after the listener and options are set up.
       context.start(options);
+
+      // Ask the device to keep the screen on so the Chromecast never drops to its
+      // ambient screensaver over a quiet scoreboard. Best effort: not every
+      // device supports the Wake Lock API, and the lock is released when the
+      // page is hidden, so re-request it whenever we become visible again.
+      async function keepScreenOn() {
+        try {
+          if (navigator.wakeLock && document.visibilityState === 'visible') {
+            await navigator.wakeLock.request('screen');
+          }
+        } catch (err) {
+          console.warn('Wake lock unavailable:', err);
+        }
+      }
+      keepScreenOn();
+      document.addEventListener('visibilitychange', keepScreenOn);
     </script>
   </body>
 </html>
