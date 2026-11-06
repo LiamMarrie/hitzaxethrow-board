@@ -11,17 +11,22 @@
  */
 
 :root {
-  --bg: #0b0f14;
-  --fg: #f4f6fb;
+  /* A projector adds light, so true black is the only thing that stays off the
+   * wall. Everything else is solid and bright: alpha and glow just wash out. */
+  --bg: #000000;
+  --fg: #ffffff;
   --dim: #7f8ea3;
   --accent: #ff4b4b;
-  --leader: #ffd166;
+  --leader: #00ff6a;
+  --turn: #ffe600;
+  --band: #0066ff;
+  --bull: #ff2020;
   --active: rgba(90, 169, 255, 0.18);
   --line: rgba(255, 255, 255, 0.14);
 
-  /* Per-game player colours, kept in sync with the tablet UI. */
-  --x: #ff4b4b; /* tic-tac-toe X */
-  --o: #4d9bff; /* tic-tac-toe O */
+  /* Per-game player colours. Same hues as the tablet, brightened for projection. */
+  --x: #ff3030; /* tic-tac-toe X */
+  --o: #00d8ff; /* tic-tac-toe O */
   --c4-a: #ff5a3c; /* connect 4 player 0 */
   --c4-b: #37c8ab; /* connect 4 player 1 */
   --match: #49d08b; /* pairs matched */
@@ -436,9 +441,9 @@ body {
 
 /* ------------------------------------------------------------------ *
  * Ring-target faces (Axe Classic / WATL / IATF). These paint the actual
- * target projected onto the physical wooden board, so the geometry and
- * colours are ported verbatim from the tablet (src/styles/main.css
- * .rt__* block). Drawn display-only by renderers/targets.js — no tap
+ * target projected onto the physical wooden board. The geometry matches the
+ * tablet; the colours are the projector palette, not the tablet's. Drawn
+ * display-only by renderers/targets.js — no tap
  * targets, so the interactive .tb__zone rules are dropped.
  * ------------------------------------------------------------------ */
 .rt__svg {
@@ -447,57 +452,60 @@ body {
   display: block;
 }
 .rt__field {
-  fill: #0b0f14;
+  fill: var(--bg);
 }
 .rt__disc {
-  fill: #0a0a0b;
+  fill: var(--bg);
+}
+.rt__disc--band {
+  fill: var(--band);
+}
+.rt__disc--bull {
+  fill: var(--bull);
 }
 .rt__line {
   fill: none;
   stroke: #f4f4f2;
 }
 .rt__cluster {
-  fill: #d63a2f;
+  fill: var(--bull);
   stroke: #f4f4f2;
   stroke-width: 3;
 }
 .rt__killshot {
-  fill: #2f6fd6;
+  fill: var(--o);
   stroke: #f4f4f2;
   stroke-width: 3;
-  filter: drop-shadow(0 0 9px rgba(47, 111, 214, 0.6));
 }
 .rt__clutch {
-  fill: #2f6fd6;
+  fill: var(--o);
   stroke: #eef4ff;
   stroke-width: 4;
-  filter: drop-shadow(0 0 10px rgba(47, 111, 214, 0.6));
 }
 /* Ring point numerals along the horizontal centre line (sized in viewBox
  * units; the SVG is 0..1000). */
 .rt__num {
   fill: #f4f4f2;
-  font-size: 52px;
+  font-size: 64px;
   font-weight: 800;
   text-anchor: middle;
   dominant-baseline: central;
   font-variant-numeric: tabular-nums;
   paint-order: stroke;
-  stroke: rgba(0, 0, 0, 0.6);
-  stroke-width: 5;
+  stroke: #000000;
+  stroke-width: 8;
 }
-/* Recent-throw markers: a glowing dot + value where each throw this round
+/* Recent-throw markers: a solid dot + value where each throw this round
  * scored. Position is computed by targets.js (we only know the scored ring,
  * not the exact landing point). */
 .rt__mark-dot {
-  fill: #ffd166;
-  stroke: #0a0a0b;
+  fill: var(--turn);
+  stroke: #000000;
   stroke-width: 4;
-  filter: drop-shadow(0 0 7px rgba(255, 209, 102, 0.7));
 }
 .rt__mark-num {
-  fill: #0a0a0b;
-  font-size: 30px;
+  fill: #000000;
+  font-size: 44px;
   font-weight: 800;
   text-anchor: middle;
   dominant-baseline: central;

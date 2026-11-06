@@ -3,8 +3,9 @@
  *
  * PURE DRAWING: this draws the axe-throwing target faces (Axe Classic / WATL /
  * IATF rings + dots) and the 501 dartboard as display-only SVG — the same
- * geometry the tablet's src/ui/*-board.js uses, with every tap handler, MISS/Undo
- * button and hit-feedback stripped. The receiver never scores or runs logic; it
+ * geometry the tablet's src/ui/*-board.js uses (colours are the projector palette
+ * in receiver.css), with every tap handler, MISS/Undo button and hit-feedback
+ * stripped. The receiver never scores or runs logic; it
  * only paints what the tablet tells it. This is what gets projected onto the
  * physical wooden board so throwers aim at it.
  *
@@ -35,7 +36,6 @@
   }
 
   // ---- ring-target geometry, ported verbatim from the tablet specs ----------
-  const BULLSEYE_RED = '#d63a2f';
   const RING_SPECS = {
     target: {
       ariaLabel: 'Axe Classic target',
@@ -46,7 +46,7 @@
         { r: 294, points: 3 },
         { r: 226, points: 4 },
         { r: 158, points: 5 },
-        { r: 90, points: 6, fill: BULLSEYE_RED },
+        { r: 90, points: 6 },
       ],
       spots: [],
     },
@@ -59,7 +59,7 @@
         { r: 258, points: 3 },
         { r: 192, points: 4 },
         { r: 126, points: 5 },
-        { r: 66, points: 6, fill: BULLSEYE_RED },
+        { r: 66, points: 6 },
       ],
       spots: [
         { cx: 432, cy: 432, r: 15, points: 6, kind: 'cluster' },
@@ -78,7 +78,7 @@
       discs: [
         { r: 340, points: 1 },
         { r: 220, points: 3 },
-        { r: 104, points: 5, fill: BULLSEYE_RED },
+        { r: 104, points: 5 },
       ],
       spots: [
         { cx: 235, cy: 161, r: 44, points: 7, kind: 'clutch' },
@@ -135,7 +135,7 @@
       const { x, y } = markerPos(spec, value, i);
       marks.push(
         svg('g', { class: 'rt__mark' }, [
-          svg('circle', { class: 'rt__mark-dot', cx: x, cy: y, r: 26 }),
+          svg('circle', { class: 'rt__mark-dot', cx: x, cy: y, r: 36 }),
           svg('text', { class: 'rt__mark-num', x, y, text: String(value) }),
         ])
       );
@@ -153,14 +153,13 @@
   function buildRingFace(gameKey, recentThrows) {
     const spec = RING_SPECS[gameKey] ?? RING_SPECS.target;
     const field = svg('rect', { class: 'rt__field', x: 0, y: 0, width: 1000, height: 1000 });
-    const discs = spec.discs.map((d) =>
-      svg('circle', {
-        class: 'rt__disc',
-        cx: CX,
-        cy: CY,
-        r: d.r,
-        ...(d.fill ? { fill: d.fill } : {}),
-      })
+    // Classes, not fill attributes: CSS on .rt__disc would beat an attribute.
+    const discClass = (i) => {
+      if (i === spec.discs.length - 1) return 'rt__disc rt__disc--bull';
+      return i % 2 === 0 ? 'rt__disc rt__disc--band' : 'rt__disc';
+    };
+    const discs = spec.discs.map((d, i) =>
+      svg('circle', { class: discClass(i), cx: CX, cy: CY, r: d.r })
     );
     const lines = spec.discs.map((d) =>
       svg('circle', { class: 'rt__line', cx: CX, cy: CY, r: d.r, 'stroke-width': spec.lineWidth })
