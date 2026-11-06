@@ -21,7 +21,6 @@
   --turn: #ffe600;
   --band: #0066ff;
   --bull: #ff2020;
-  --line: rgba(255, 255, 255, 0.14);
 
   /* Per-game player colours. Same hues as the tablet, brightened for projection. */
   --x: #ff3030; /* tic-tac-toe X */
@@ -100,7 +99,7 @@ body {
   max-height: none;
   overflow: visible;
 }
-.stage__region--primary svg {
+.stage__region--primary > svg {
   width: 100%;
   height: 100%;
   max-width: 100%;
@@ -145,26 +144,24 @@ body {
   align-items: center;
   justify-content: center;
 }
-.rcv-status-wrap .rcv-status {
-  margin-bottom: 0;
-}
 .rcv-status {
   display: flex;
-  align-items: baseline;
-  gap: 2vmin;
-  margin-bottom: 2.5vmin;
-  font-size: 3.4vmin;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 4vmin;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 .rcv-status__name {
-  font-weight: 800;
+  font-weight: 700;
 }
 .rcv-status__meta {
-  color: var(--dim);
-  font-size: 2.6vmin;
+  color: var(--fg);
+  font-size: 1em;
 }
 .rcv-status--done {
-  color: var(--leader);
-  font-weight: 800;
+  color: var(--turn);
 }
 
 /* Projected scoreboard for the throwing games (score-list.js): name then score.
@@ -224,7 +221,7 @@ body {
 }
 
 /* ------------------------------------------------------------------ *
- * Tic-Tac-Toe: 3x3 grid of big glowing marks.
+ * Tic-Tac-Toe: hash lines and solid drawn marks on black.
  * ------------------------------------------------------------------ */
 .ttt {
   display: flex;
@@ -232,36 +229,33 @@ body {
   align-items: center;
   gap: 3vmin;
 }
-.ttt__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 1.4vmin;
-  width: min(70vmin, 70vh);
-  aspect-ratio: 1 / 1;
+.ttt__board {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
-.ttt__cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 0.25vmin solid var(--line);
-  border-radius: 2vmin;
-  font-size: 18vmin;
-  font-weight: 800;
-  line-height: 1;
+.ttt__line {
+  stroke: var(--fg);
+  stroke-width: 4;
+  stroke-linecap: round;
 }
-.ttt__cell--x {
+.ttt__strike {
+  stroke: var(--turn);
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+/* The status-line mark. Marks on the board are sized by their SVG attributes. */
+.rcv-status .ttt__mark {
+  display: block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+}
+.ttt__mark--x {
   color: var(--x);
-  text-shadow: 0 0 3vmin rgba(255, 75, 75, 0.55);
 }
-.ttt__cell--o {
+.ttt__mark--o {
   color: var(--o);
-  text-shadow: 0 0 3vmin rgba(77, 155, 255, 0.55);
-}
-.ttt__cell--win {
-  background: rgba(255, 209, 102, 0.14);
-  border-color: var(--leader);
 }
 
 /* ------------------------------------------------------------------ *
@@ -274,10 +268,9 @@ body {
   gap: 3vmin;
 }
 .c4__frame {
-  background: #1b49b8;
+  background: var(--band);
   padding: 2vmin;
   border-radius: 2.4vmin;
-  box-shadow: inset 0 0 4vmin rgba(0, 0, 0, 0.35);
 }
 .c4__grid {
   display: grid;
@@ -291,17 +284,16 @@ body {
   max-width: 11vw;
   max-height: 11vw;
   border-radius: 50%;
-  background: #0b0f14;
-  box-shadow: inset 0 0.6vmin 1.2vmin rgba(0, 0, 0, 0.6);
+  background: var(--bg);
 }
 .c4__cell--a {
-  background: radial-gradient(circle at 35% 30%, #ff8266, var(--c4-a) 70%);
+  background: var(--c4-a);
 }
 .c4__cell--b {
-  background: radial-gradient(circle at 35% 30%, #6fe6d0, var(--c4-b) 70%);
+  background: var(--c4-b);
 }
 .c4__cell--win {
-  outline: 0.5vmin solid var(--leader);
+  outline: 0.5vmin solid var(--turn);
   outline-offset: -0.5vmin;
 }
 
@@ -327,14 +319,14 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 0.25vmin solid var(--line);
+  background: var(--bg);
+  border: 0.25vmin solid var(--fg);
   border-radius: 2vmin;
   font-weight: 800;
   line-height: 1;
 }
 .pairs__card--down {
-  color: var(--dim);
+  color: var(--fg);
   font-size: 10vmin;
 }
 .pairs__card--up {
@@ -474,7 +466,6 @@ body {
   gap: 0;
   justify-content: center;
 }
-.stage__region--primary .ttt__grid,
 .stage__region--primary .pairs__grid {
   width: auto;
   height: 100%;

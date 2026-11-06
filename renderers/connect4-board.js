@@ -48,7 +48,7 @@
     }
     const dot = el('span', { class: `c4-dot ${DISC_CLASS[status.mark] ?? ''}` });
     dot.style.cssText =
-      'display:inline-block;width:3vmin;height:3vmin;border-radius:50%;vertical-align:middle;';
+      'display:inline-block;width:0.8em;height:0.8em;border-radius:50%;vertical-align:middle;';
     return el('div', { class: 'rcv-status' }, [
       dot,
       el('span', { class: 'rcv-status__name', text: `${status.name ?? '—'}'s turn` }),
