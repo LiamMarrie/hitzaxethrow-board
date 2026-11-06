@@ -76,36 +76,12 @@ let lastFit = null;
 
 /**
  * Scale the secondary content (scoreboard / status) to fit its region. The
- * content is sized in vmin, so on its own it ignores the region staff set: a
- * short region crops it, and the editor's Scale button only resizes an empty
- * box. Instead, lay the content out, measure it, and scale it uniformly so it
- * fills the region without clipping — then centre it. Laid out a second time at
- * the width the scaled result will occupy, so a shrunk scoreboard still spans
- * its region rather than sitting in a narrow column. Returns the scale applied
- * (0 when the box isn't laid out).
- */
-function fitToBox(box, fit) {
-  const bw = box.clientWidth;
-  const bh = box.clientHeight;
-  if (!bw || !bh) return 0; // not laid out (e.g. jsdom smoke test)
-
-  const measure = (width) => {
-    fit.style.width = `${width}px`;
-    return { w: Math.max(fit.scrollWidth, fit.offsetWidth), h: fit.offsetHeight };
-  };
-
-  fit.style.transform = '';
-  let { w, h } = measure(bw);
-  if (!w || !h) return 0;
-  ({ w, h } = measure(bw / Math.min(bw / w, bh / h, MAX_FIT)));
-  return place(box, fit, w, h);
-}
-
-/**
- * Like fitToBox, but at the content's natural (max-content) size — no
- * re-layout at a wider width. For the ring scoreboard, whose columns hug their
- * text: stretching it to span the region only spread names and totals to
- * opposite edges with empty space between.
+ * content is sized in vmin, so on its own it ignores the region staff set.
+ * Instead, lay it out at its natural (max-content) size, measure it, and scale
+ * it uniformly to fill the region without clipping, then centre it. Measuring
+ * the natural size is what lets short content scale UP: anything stretched to
+ * the box width measures as already fitting. Returns the scale applied (0 when
+ * the box isn't laid out, e.g. the jsdom smoke test).
  */
 function fitNatural(box, fit) {
   const bw = box.clientWidth;
@@ -133,17 +109,13 @@ function place(box, fit, w, h) {
 
 /**
  * Fit the last-rendered secondary content. When the renderer offered several
- * arrangements (the ring scoreboard split into 1..3 panels), try each against
- * the calibrated box and keep whichever ends up scaled largest — so a small or
- * oddly-shaped box staff calibrated still gets the biggest possible names.
+ * arrangements (the score list in 1 or 2 columns), try each against the
+ * calibrated box and keep whichever ends up scaled largest, so a small or
+ * oddly-shaped box still gets the biggest possible names.
  */
 function refit() {
   if (!lastFit) return;
   const { box, fit, variants } = lastFit;
-  if (!variants) {
-    fitToBox(box, fit);
-    return;
-  }
   let best = variants[0];
   let bestScale = -1;
   for (const v of variants) {
@@ -199,7 +171,7 @@ window.renderers = {
       fit.append(parts.secondary);
       box.append(fit);
       stage.append(box);
-      const variants = parts.secondaryVariants?.length ? parts.secondaryVariants : null;
+      const variants = parts.secondaryVariants?.length ? parts.secondaryVariants : [parts.secondary];
       lastFit = { box, fit, variants };
     } else {
       lastFit = null;

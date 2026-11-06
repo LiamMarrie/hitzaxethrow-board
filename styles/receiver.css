@@ -21,7 +21,6 @@
   --turn: #ffe600;
   --band: #0066ff;
   --bull: #ff2020;
-  --active: rgba(90, 169, 255, 0.18);
   --line: rgba(255, 255, 255, 0.14);
 
   /* Per-game player colours. Same hues as the tablet, brightened for projection. */
@@ -90,7 +89,7 @@ body {
   overflow: visible;
 }
 /* Scoreboard / status content, scaled to fit its region by index.js
- * (fitToBox) so it fills the box staff calibrated and is never clipped. */
+ * (fitNatural) so it fills the box staff calibrated and is never clipped. */
 .stage__fit {
   position: absolute;
   left: 0;
@@ -168,128 +167,60 @@ body {
   font-weight: 800;
 }
 
-/* Ring scoreboard: players split across 1..3 side-by-side panels (index.js
- * picks the count that fits the calibrated box largest). Everything is packed
- * tight, because the region is often small and the fit scale, not the font
- * size, decides how big the names end up on the board. */
-.sb {
-  display: flex;
-  align-items: flex-start;
-  gap: 1.4em;
+/* Projected scoreboard for the throwing games (score-list.js): name then score.
+ * The fit scale, not this font size, decides how big it ends up on the wall.
+ * Turn and leader are solid colours; alpha fills wash out on a projector. */
+.sl {
   font-size: 4vmin;
 }
-.sb__done {
-  margin-bottom: 0.3em;
-}
-.sb__grid {
-  display: grid;
-  /* Columns hug their text: name | one per round | total. */
-  /* No column gap (cell padding spaces them) so the active row's fill is solid. */
-  grid-template-columns: max-content repeat(var(--sb-rounds), minmax(2.4ch, max-content)) max-content;
-}
-.sb__row {
-  display: contents;
-}
-.sb__cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.05em 0.22em;
-  line-height: 1.15;
+.sl__banner {
+  margin-bottom: 0.2em;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.sb__cell--name {
-  justify-content: flex-start;
-  gap: 0.2em;
-  padding-right: 0.35em;
-  font-weight: 800;
-}
-/* Long names would widen every panel and shrink the whole board. */
-.sb__playername {
-  max-width: 10ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.2;
+  color: var(--turn);
+  text-align: center;
   white-space: nowrap;
 }
-.sb__cell--total {
-  padding-left: 0.35em;
-  font-weight: 900;
+.sl__cols {
+  display: flex;
+  align-items: flex-start;
+  gap: 1em;
 }
-.sb__cell--head {
-  padding-top: 0;
-  padding-bottom: 0;
-  color: var(--dim);
-  font-size: 0.6em;
-  line-height: 1;
+.sl__col {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  column-gap: 0.6em;
 }
-.sb__cell--empty {
-  color: var(--dim);
+.sl__row {
+  display: contents;
 }
-.sb__row--leader .sb__cell--name,
-.sb__row--leader .sb__cell--total {
+.sl__name,
+.sl__value {
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.sl__value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.sl__row--active .sl__name,
+.sl__row--active .sl__value {
+  color: var(--turn);
+}
+.sl__row--leader .sl__value {
   color: var(--leader);
 }
-/* Whose turn: a solid fill (an outline washes out on a projector). */
-.sb__row--active .sb__cell {
-  background: rgba(90, 169, 255, 0.45);
-}
-.sb__row--active .sb__cell:first-child {
-  border-radius: 0.2em 0 0 0.2em;
-}
-.sb__row--active .sb__cell:last-child {
-  border-radius: 0 0.2em 0.2em 0;
-}
-.sb__crown {
-  font-size: 0.8em;
-}
-
-/* ------------------------------------------------------------------ *
- * Dartboard (501): a two-column count-down scoreboard. Big remaining
- * number per player; leader = fewest remaining once play starts.
- * ------------------------------------------------------------------ */
-.db {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.2vmin;
-}
-.db__row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 2vmin;
-  padding: 2.2vmin 3vmin;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 1.4vmin;
-}
-.db__row--leader {
-  background: rgba(255, 209, 102, 0.12);
-}
-.db__row--active {
-  outline: 0.35vmin solid var(--active);
-}
-.db__row--winner {
-  background: rgba(73, 208, 139, 0.16);
-}
-.db__name {
-  display: flex;
-  align-items: center;
-  gap: 1.4vmin;
-  font-size: 4.4vmin;
-  font-weight: 800;
-}
-.db__crown {
-  font-size: 3.8vmin;
-}
-.db__remaining {
-  font-size: 7vmin;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-.db__remaining--out {
-  color: var(--match);
+/* Drawn, not an emoji: colour emoji project as muddy blobs. */
+.sl__row--leader .sl__value::before {
+  content: '';
+  display: inline-block;
+  margin-right: 0.25em;
+  vertical-align: 0.08em;
+  border-left: 0.3em solid transparent;
+  border-right: 0.3em solid transparent;
+  border-bottom: 0.5em solid var(--leader);
 }
 
 /* ------------------------------------------------------------------ *
@@ -530,26 +461,6 @@ body {
   dominant-baseline: central;
   letter-spacing: 0.5px;
 }
-/* Darts thrown so far this visit, shown as chips under the scoreboard (a
- * value like 20 is ambiguous between single/double/triple, so it can't be
- * pinned to a wedge on the static board). */
-.db__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.4vmin;
-  margin-top: 2.5vmin;
-}
-.db__chip {
-  min-width: 7vmin;
-  padding: 1vmin 2vmin;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 1.2vmin;
-  font-size: 4vmin;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ------------------------------------------------------------------ *
  * Primary-region fit for the flat game boards (ttt / connect4 / pairs).
  * Their grids are square, so fill the region height and let width follow,
