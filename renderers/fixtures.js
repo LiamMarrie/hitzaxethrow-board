@@ -65,6 +65,22 @@
       cells: ringCells(i < 3 ? [20, 18 + i, 6] : [15, 11 + i], 5),
     })),
   };
+  const sixDefault = {
+    ...sixMid,
+    rows: sixMid.rows.map((row, i) => ({ ...row, name: `Player ${i + 1}` })),
+  };
+  const dartSix = {
+    kind: 'darts',
+    recentThrows: [],
+    status: { done: false, name: 'Bo', meta: '301 remaining · Dart 1 of 3' },
+    rows: sixNames.map((name, i) => ({
+      name,
+      remaining: [421, 180, 455, 301, 212, 388][i],
+      leader: i === 1,
+      active: i === 3,
+      winner: false,
+    })),
+  };
   const smallBox = {
     primary: { x: 0.22, y: 0.2, w: 0.56, h: 0.76 },
     secondary: { x: 0.25, y: 0.05, w: 0.5, h: 0.1 },
@@ -188,6 +204,13 @@
     ],
   };
 
+  const tttEmpty = {
+    kind: 'grid',
+    cells: Array.from({ length: 9 }, () => ({ mark: null, win: false })),
+    status: { kind: 'turn', mark: 'x', name: 'Player 1' },
+  };
+  const tttLongName = { ...tttEmpty, status: { kind: 'turn', mark: 'o', name: 'Maximilian12' } };
+
   // ---- calibration demos ---------------------------------------------------
   // These pass an explicit `layout` (the exact shape the calibration editor
   // pushes: {primary, secondary, rotation}) so the preview shows what a few
@@ -215,10 +238,14 @@
     { label: 'Axe Classic — CAL: rotated 90°', game: 'target', view: targetMid, layout: calibratedRotated },
     { label: 'WATL — mid (3P)', game: 'watl', view: watlMid },
     { label: 'Axe Classic — 6P', game: 'target', view: sixMid },
+    { label: 'Axe Classic — 6P default names', game: 'target', view: sixDefault },
     { label: 'Axe Classic — 6P small box', game: 'target', view: sixMid, layout: smallBox },
     { label: 'IATF — complete', game: 'iatf', view: iatfComplete },
     { label: '501 — mid', game: 'dartboard', view: dartMid },
+    { label: '501 — 6P long names', game: 'dartboard', view: dartSix },
     { label: '501 — win', game: 'dartboard', view: dartWin },
+    { label: 'Tic-Tac-Toe — empty', game: 'tictactoe', view: tttEmpty },
+    { label: 'Tic-Tac-Toe — long name', game: 'tictactoe', view: tttLongName },
     { label: 'Tic-Tac-Toe — mid', game: 'tictactoe', view: tttMid },
     { label: 'Tic-Tac-Toe — win', game: 'tictactoe', view: tttWin },
     { label: 'Connect 4 — mid', game: 'connect4', view: c4Mid },
