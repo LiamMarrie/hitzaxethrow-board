@@ -83,7 +83,7 @@
   };
   const smallBox = {
     primary: { x: 0.22, y: 0.2, w: 0.56, h: 0.76 },
-    secondary: { x: 0.25, y: 0.05, w: 0.5, h: 0.1 },
+    secondary: { x: 0.3, y: 0.02, w: 0.4, h: 0.18 },
     rotation: 0,
   };
 

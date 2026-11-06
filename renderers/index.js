@@ -44,11 +44,11 @@ const THROWING = new Set(['target', 'watl', 'iatf', 'dartboard']);
 // Fallback layouts, identical to cast-layout.js's THROWING_DEFAULT / BOARD_DEFAULT.
 const THROWING_DEFAULT = {
   primary: { x: 0.22, y: 0.2, w: 0.56, h: 0.76 },
-  secondary: { x: 0.25, y: 0.03, w: 0.5, h: 0.13 },
+  secondary: { x: 0.3, y: 0.02, w: 0.4, h: 0.18 },
 };
 const BOARD_DEFAULT = {
   primary: { x: 0.21, y: 0.16, w: 0.58, h: 0.8 },
-  secondary: { x: 0.1, y: 0.03, w: 0.8, h: 0.1 },
+  secondary: { x: 0.3, y: 0.02, w: 0.4, h: 0.12 },
 };
 
 function defaultLayout(game) {
