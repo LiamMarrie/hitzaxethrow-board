@@ -31,6 +31,7 @@ const RENDERERS = {
   target: renderRingTargetBoard,
   watl: renderRingTargetBoard,
   iatf: renderRingTargetBoard,
+  archery: renderRingTargetBoard,
   dartboard: renderDartboardBoard,
   tictactoe: renderTicTacToeBoard,
   connect4: renderConnect4Board,
@@ -39,7 +40,7 @@ const RENDERERS = {
 
 // Games whose primary element is a throwing target (vs a flat game board). Kept
 // in sync with THROWING_GAMES in axethrowapp/src/lib/cast-layout.js.
-const THROWING = new Set(['target', 'watl', 'iatf', 'dartboard']);
+const THROWING = new Set(['target', 'watl', 'iatf', 'archery', 'dartboard']);
 
 // Fallback layouts, identical to cast-layout.js's THROWING_DEFAULT / BOARD_DEFAULT.
 const THROWING_DEFAULT = {

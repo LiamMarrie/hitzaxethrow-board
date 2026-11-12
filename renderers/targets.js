@@ -72,6 +72,21 @@
         { cx: 779, cy: 860, r: 30, points: 8, kind: 'killshot' },
       ],
     },
+    // Archery: blue 6, red 7–8, gold 9–10 on exactly the Axe Classic footprint
+    // (outer r=430, 7-unit white lines) so it shares the projector calibration.
+    archery: {
+      ariaLabel: 'Archery target',
+      lineWidth: 7,
+      discs: [
+        { r: 430, points: 6, cls: 'rt__disc--arch-blue' },
+        { r: 344, points: 7, cls: 'rt__disc--arch-red' },
+        { r: 258, points: 8, cls: 'rt__disc--arch-red' },
+        { r: 172, points: 9, cls: 'rt__disc--arch-gold', numDark: true },
+        { r: 86, points: 10, cls: 'rt__disc--arch-gold', numDark: true },
+      ],
+      innerLines: [43], // the X ring inside the 10 (visual only)
+      spots: [],
+    },
     iatf: {
       ariaLabel: 'IATF target',
       lineWidth: 8,
@@ -93,7 +108,7 @@
       const innerR = discs[i + 1]?.r ?? 0;
       const bandMid = (disc.r + innerR) / 2;
       return svg('text', {
-        class: 'rt__num',
+        class: disc.numDark ? 'rt__num rt__num--dark' : 'rt__num',
         x: CX - bandMid,
         y: CY,
         'aria-hidden': 'true',
@@ -146,7 +161,7 @@
   /**
    * Build a ring-target face (Axe Classic / WATL / IATF), with optional markers
    * for the current round's throws.
-   * @param {string} gameKey  'target' | 'watl' | 'iatf'
+   * @param {string} gameKey  'target' | 'watl' | 'iatf' | 'archery'
    * @param {number[]} recentThrows  current round's scored values
    * @returns {SVGElement}
    */
@@ -155,6 +170,7 @@
     const field = svg('rect', { class: 'rt__field', x: 0, y: 0, width: 1000, height: 1000 });
     // Classes, not fill attributes: CSS on .rt__disc would beat an attribute.
     const discClass = (i) => {
+      if (spec.discs[i].cls) return `rt__disc ${spec.discs[i].cls}`;
       if (i === spec.discs.length - 1) return 'rt__disc rt__disc--bull';
       return i % 2 === 0 ? 'rt__disc rt__disc--band' : 'rt__disc';
     };
@@ -164,6 +180,11 @@
     const lines = spec.discs.map((d) =>
       svg('circle', { class: 'rt__line', cx: CX, cy: CY, r: d.r, 'stroke-width': spec.lineWidth })
     );
+    for (const r of spec.innerLines ?? []) {
+      lines.push(
+        svg('circle', { class: 'rt__line', cx: CX, cy: CY, r, 'stroke-width': Math.max(2, spec.lineWidth / 2) })
+      );
+    }
     const numbers = ringNumbers(spec.discs);
     const spots = spec.spots.map((s) =>
       svg('circle', { class: `rt__${s.kind}`, cx: s.cx, cy: s.cy, r: s.r })

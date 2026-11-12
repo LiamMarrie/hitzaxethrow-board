@@ -237,6 +237,7 @@
     { label: 'Axe Classic — CAL: shifted/scaled', game: 'target', view: targetMid, layout: calibratedShift },
     { label: 'Axe Classic — CAL: rotated 90°', game: 'target', view: targetMid, layout: calibratedRotated },
     { label: 'WATL — mid (3P)', game: 'watl', view: watlMid },
+    { label: 'Archery — mid', game: 'archery', view: { ...targetMid, recentThrows: [10, 7, 6] } },
     { label: 'Axe Classic — 6P', game: 'target', view: sixMid },
     { label: 'Axe Classic — 6P default names', game: 'target', view: sixDefault },
     { label: 'Axe Classic — 6P small box', game: 'target', view: sixMid, layout: smallBox },
